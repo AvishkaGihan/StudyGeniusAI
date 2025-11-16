@@ -39,6 +39,9 @@ export const appConfig = {
     maxCardCount: 15,
     timeout: 30000, // 30 seconds
     streamingEnabled: true,
+    maxTokens: 2000, // Maximum output tokens for generation
+    temperature: 0.5, // Temperature for generation (0-2, lower = more deterministic)
+    topP: 0.95, // Top P for nucleus sampling (0-1)
   },
 
   // OCR Configuration

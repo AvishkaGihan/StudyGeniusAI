@@ -1,37 +1,209 @@
 import { GoogleGenAI } from "@google/genai";
-import Constants from "expo-constants";
+import { env } from "../../config/env";
+import { appConfig } from "../../config/appConfig";
+import { logger } from "../logger";
+import { AppError, ErrorCode } from "../../utils/errorHandling";
 
-const apiKey = Constants.expoConfig?.extra?.geminiApiKey;
+/**
+ * Gemini AI Client
+ * Handles communication with Google Gemini API
+ */
 
-if (!apiKey) {
-  throw new Error("Gemini API key must be provided in app config");
-}
+// Initialize Gemini client
+const ai = new GoogleGenAI({
+  apiKey: env.geminiApiKey,
+});
 
-// Initialize the main client
-const genAI = new GoogleGenAI({ apiKey });
-
-// Export a specific model instance for use in the app
-// We use gemini-2.5-flash as it's a fast, modern model
-export const geminiModel = genAI;
-
-// Helper function for card generation
-export async function generateFlashcards(
-  ocrText: string,
-  cardCount: number = 5
-) {
+/**
+ * Generate content with Gemini (non-streaming)
+ */
+export async function generateContent(prompt: string): Promise<string> {
   try {
-    const prompt = `Generate ${cardCount} flashcard Q&A pairs from this text. Format as a valid JSON array of objects, where each object has a "question" key and an "answer" key. Make questions clear and answers concise.\n\nText:\n${ocrText}`;
-
-    // Use the correct method to generate content
-    const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+    logger.info("Generating content with Gemini", {
+      promptLength: prompt.length,
     });
 
-    // Return the text part of the response, which should be the JSON string
-    return response.text;
+    const result = await ai.models.generateContent({
+      model: appConfig.gemini.model,
+      contents: prompt,
+      config: {
+        temperature: appConfig.gemini.temperature,
+        topP: appConfig.gemini.topP,
+        maxOutputTokens: appConfig.gemini.maxTokens,
+      },
+    });
+
+    const text = result.text;
+
+    if (!text) {
+      throw new AppError(
+        ErrorCode.GEMINI_API_ERROR,
+        "No response from AI model"
+      );
+    }
+
+    logger.info("Content generated successfully", {
+      responseLength: text.length,
+    });
+
+    return text;
   } catch (error) {
-    console.error("Gemini API error:", error);
-    throw new Error("Failed to generate flashcards from Gemini.");
+    logger.error("Gemini content generation failed", { error });
+
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    throw new AppError(
+      ErrorCode.GEMINI_API_ERROR,
+      "Failed to generate content with AI"
+    );
   }
 }
+
+/**
+ * Generate content with streaming (for real-time card generation)
+ */
+export async function* generateContentStream(
+  prompt: string
+): AsyncGenerator<string, void, unknown> {
+  try {
+    logger.info("Starting streaming content generation", {
+      promptLength: prompt.length,
+    });
+
+    const result = await ai.models.generateContentStream({
+      model: appConfig.gemini.model,
+      contents: prompt,
+      config: {
+        temperature: appConfig.gemini.temperature,
+        topP: appConfig.gemini.topP,
+        maxOutputTokens: appConfig.gemini.maxTokens,
+      },
+    });
+
+    for await (const chunk of result) {
+      const chunkText = chunk.text;
+      if (chunkText) {
+        yield chunkText;
+      }
+    }
+
+    logger.info("Streaming content generation completed");
+  } catch (error) {
+    logger.error("Gemini streaming generation failed", { error });
+
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    throw new AppError(
+      ErrorCode.GEMINI_API_ERROR,
+      "Failed to generate streaming content with AI"
+    );
+  }
+}
+
+/**
+ * Chat with Gemini (for tutor feature)
+ */
+export async function chat(
+  messages: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
+  systemInstruction?: string
+): Promise<string> {
+  try {
+    logger.info("Starting chat with Gemini", {
+      messageCount: messages.length,
+    });
+
+    // Create a chat session
+    const chatSession = await ai.chats.create({
+      model: appConfig.gemini.model,
+      config: {
+        temperature: 0.7, // Slightly lower for more focused responses
+        topP: appConfig.gemini.topP,
+        maxOutputTokens: appConfig.gemini.maxTokens,
+      },
+    });
+
+    // Convert messages to the expected format and send them
+    for (const message of messages.slice(0, -1)) {
+      await chatSession.sendMessage({
+        message: message.parts[0].text,
+      });
+    }
+
+    // Send the last message and get response
+    const lastMessage = messages[messages.length - 1];
+    const result = await chatSession.sendMessage({
+      message: lastMessage.parts[0].text,
+    });
+
+    const text = result.text;
+
+    if (!text) {
+      throw new AppError(
+        ErrorCode.GEMINI_API_ERROR,
+        "No response from AI tutor"
+      );
+    }
+
+    logger.info("Chat response received", {
+      responseLength: text.length,
+    });
+
+    return text;
+  } catch (error) {
+    logger.error("Gemini chat failed", { error });
+
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    throw new AppError(
+      ErrorCode.GEMINI_API_ERROR,
+      "Failed to get response from AI tutor"
+    );
+  }
+}
+
+/**
+ * Count tokens in text (useful for managing context length)
+ */
+export async function countTokens(text: string): Promise<number> {
+  try {
+    const result = await ai.models.countTokens({
+      model: appConfig.gemini.model,
+      contents: text,
+    });
+
+    return result.totalTokens ?? Math.ceil(text.length / 4);
+  } catch (error) {
+    logger.error("Token counting failed", { error });
+    // Return estimate if API fails
+    return Math.ceil(text.length / 4); // Rough estimate: 1 token ≈ 4 characters
+  }
+}
+
+/**
+ * Check if Gemini API is available
+ */
+export async function checkApiHealth(): Promise<boolean> {
+  try {
+    const result = await ai.models.generateContent({
+      model: appConfig.gemini.model,
+      contents: "Hello",
+      config: {
+        maxOutputTokens: 10,
+      },
+    });
+
+    return !!result.text;
+  } catch (error) {
+    logger.error("Gemini API health check failed", { error });
+    return false;
+  }
+}
+
+// Export configured client
+export default ai;
