@@ -40,3 +40,9 @@ yarn-error.*
 /ios
 /android
 .env
+
+# .vscode
+.vscode/
+.history/
+.idea/
+*.code-workspace
