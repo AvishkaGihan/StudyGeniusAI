@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, forwardRef } from "react";
 import { View, StyleSheet } from "react-native";
 import {
   CameraView as ExpoCameraView,
@@ -14,32 +14,27 @@ interface CameraViewProps {
   testID?: string;
 }
 
-export const CameraView: React.FC<CameraViewProps> = ({
-  cameraType,
-  onReady,
-  style,
-  testID,
-}) => {
-  const cameraRef = useRef<ExpoCameraView>(null);
+export const CameraView = forwardRef<ExpoCameraView, CameraViewProps>(
+  ({ cameraType, onReady, style, testID }, ref) => {
+    const facing =
+      typeof cameraType === "string"
+        ? cameraType
+        : cameraType === 1
+          ? "front"
+          : "back";
 
-  const facing =
-    typeof cameraType === "string"
-      ? cameraType
-      : cameraType === 1
-        ? "front"
-        : "back";
-
-  return (
-    <View style={[styles.container, style]} testID={testID}>
-      <ExpoCameraView
-        ref={cameraRef}
-        style={styles.camera}
-        facing={facing}
-        onCameraReady={onReady}
-      />
-    </View>
-  );
-};
+    return (
+      <View style={[styles.container, style]} testID={testID}>
+        <ExpoCameraView
+          ref={ref}
+          style={styles.camera}
+          facing={facing}
+          onCameraReady={onReady}
+        />
+      </View>
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   container: {
