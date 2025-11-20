@@ -4,7 +4,7 @@ import {
   fileAsyncTransport,
 } from "react-native-logs";
 import { isDevelopment, isProduction } from "../config/env";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 
 /**
  * Logging Service

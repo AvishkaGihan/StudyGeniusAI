@@ -1,4 +1,4 @@
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 // @ts-ignore - manipulateAsync is deprecated but still functional
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { logger } from "../logger";
@@ -154,9 +154,17 @@ export async function getImageDimensions(
   imageUri: string
 ): Promise<{ width: number; height: number }> {
   try {
+    logger.info("Getting image dimensions", { imageUri });
+
     // Use manipulateAsync with no operations just to get dimensions
     const result = await manipulateAsync(imageUri, [], {
       format: SaveFormat.JPEG,
+    });
+
+    logger.info("Image dimensions retrieved", {
+      width: result.width,
+      height: result.height,
+      imageUri,
     });
 
     return {
@@ -164,10 +172,16 @@ export async function getImageDimensions(
       height: result.height,
     };
   } catch (error) {
-    logger.error("Failed to get image dimensions", { error, imageUri });
+    // Log detailed error information
+    logger.error("Failed to get image dimensions", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      imageUri,
+    });
     throw new AppError(
       ErrorCode.IMAGE_PROCESSING_ERROR,
-      "Failed to read image dimensions"
+      `Failed to read image dimensions: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
@@ -180,10 +194,14 @@ export async function validateImage(imageUri: string): Promise<{
   error?: string;
 }> {
   try {
+    logger.info("Validating image", { imageUri });
+
     // Check if file exists
     const fileInfo = await FileSystem.getInfoAsync(imageUri);
+    logger.info("File info retrieved", { fileInfo, imageUri });
 
     if (!fileInfo.exists) {
+      logger.warn("Image file does not exist", { imageUri });
       return {
         isValid: false,
         error: "Image file does not exist",
@@ -193,6 +211,11 @@ export async function validateImage(imageUri: string): Promise<{
     // Check file size (max 10MB)
     const maxSizeBytes = 10 * 1024 * 1024; // 10MB
     if (fileInfo.size && fileInfo.size > maxSizeBytes) {
+      logger.warn("Image file too large", {
+        size: fileInfo.size,
+        maxSize: maxSizeBytes,
+        imageUri,
+      });
       return {
         isValid: false,
         error: "Image file is too large (max 10MB)",
@@ -202,19 +225,35 @@ export async function validateImage(imageUri: string): Promise<{
     // Check if we can read image dimensions (validates it's a valid image)
     try {
       await getImageDimensions(imageUri);
-    } catch {
+      logger.info("Image validation successful", { imageUri });
+    } catch (dimensionError) {
+      logger.error("Image dimension check failed", {
+        error: dimensionError,
+        errorMessage:
+          dimensionError instanceof Error
+            ? dimensionError.message
+            : String(dimensionError),
+        errorStack:
+          dimensionError instanceof Error ? dimensionError.stack : undefined,
+        imageUri,
+      });
       return {
         isValid: false,
-        error: "Invalid image file format",
+        error: `Invalid image file format: ${dimensionError instanceof Error ? dimensionError.message : String(dimensionError)}`,
       };
     }
 
     return { isValid: true };
   } catch (error) {
-    logger.error("Image validation failed", { error, imageUri });
+    logger.error("Image validation failed", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      imageUri,
+    });
     return {
       isValid: false,
-      error: "Failed to validate image",
+      error: `Failed to validate image: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -311,19 +350,32 @@ export async function prepareImageForOCR(
     logger.info("Preparing image for OCR", { imageUri });
 
     // Validate image first
+    logger.info("Starting image validation", { imageUri });
     const validation = await validateImage(imageUri);
+
     if (!validation.isValid) {
+      logger.error("Image validation failed in prepareImageForOCR", {
+        validationError: validation.error,
+        imageUri,
+      });
       throw new AppError(
         ErrorCode.IMAGE_PROCESSING_ERROR,
         validation.error || "Invalid image"
       );
     }
 
+    logger.info("Image validation passed, enhancing image", { imageUri });
+
     // Enhance and compress
     const enhancedUri = await enhanceImageForOCR(imageUri);
+    logger.info("Image enhanced", { originalUri: imageUri, enhancedUri });
 
     // Get dimensions
     const dimensions = await getImageDimensions(enhancedUri);
+    logger.info("Dimensions retrieved for enhanced image", {
+      dimensions,
+      enhancedUri,
+    });
 
     const capturedImage: CapturedImage = {
       uri: enhancedUri,
@@ -331,11 +383,18 @@ export async function prepareImageForOCR(
       height: dimensions.height,
     };
 
-    logger.info("Image prepared for OCR", capturedImage);
+    logger.info("Image prepared for OCR successfully", capturedImage);
 
     return capturedImage;
   } catch (error) {
-    logger.error("Image preparation failed", { error, imageUri });
+    logger.error("Image preparation failed", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorType: error instanceof AppError ? "AppError" : "Unknown",
+      errorCode: error instanceof AppError ? error.code : undefined,
+      imageUri,
+    });
 
     if (error instanceof AppError) {
       throw error;
@@ -343,7 +402,7 @@ export async function prepareImageForOCR(
 
     throw new AppError(
       ErrorCode.IMAGE_PROCESSING_ERROR,
-      "Failed to prepare image for OCR"
+      `Failed to prepare image for OCR: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }

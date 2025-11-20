@@ -34,7 +34,7 @@ export const appConfig = {
   // Gemini AI Configuration
   gemini: {
     apiKey: env.geminiApiKey,
-    model: "gemini-2.0-flash-exp", // Latest model as of Nov 2025
+    model: "gemini-2.5-pro", // Latest model as of Nov 2025
     defaultCardCount: 5,
     maxCardCount: 15,
     timeout: 30000, // 30 seconds
