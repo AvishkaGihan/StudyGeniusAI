@@ -34,13 +34,14 @@ export const appConfig = {
   // Gemini AI Configuration
   gemini: {
     apiKey: env.geminiApiKey,
-    model: "gemini-2.0-flash-exp", // Working model for v1beta API
+    model: "gemini-2.5-flash", // Model with free tier quota for text generation
+    visionModel: "gemini-2.5-flash", // Model for vision tasks like OCR
     defaultCardCount: 5,
     maxCardCount: 15,
     timeout: 30000, // 30 seconds
-    streamingEnabled: true,
+    streamingEnabled: false, // Disabled due to quota limits on streaming models
     maxTokens: 2000, // Maximum output tokens for generation
-    temperature: 0.5, // Temperature for generation (0-2, lower = more deterministic)
+    temperature: 1.0, // Recommended temperature for Gemini models
     topP: 0.95, // Top P for nucleus sampling (0-1)
   },
 

@@ -38,7 +38,7 @@ export async function extractTextFromImage(
 
     // Use Gemini Vision to extract text
     const result = await ai.models.generateContent({
-      model: appConfig.gemini.model,
+      model: appConfig.gemini.visionModel || appConfig.gemini.model,
       contents: [
         {
           parts: [
@@ -114,7 +114,10 @@ export async function extractTextFromImage(
         );
       }
 
-      if (error.message.includes("network") || error.message.includes("fetch")) {
+      if (
+        error.message.includes("network") ||
+        error.message.includes("fetch")
+      ) {
         throw new AppError(
           ErrorCode.OCR_FAILED,
           "Network error. Please check your internet connection."

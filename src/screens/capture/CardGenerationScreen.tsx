@@ -12,7 +12,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CaptureStackParamList, GeneratedCard } from "../../utils/types";
 import { useAppDispatch } from "../../store";
 import { addGeneratedCard } from "../../store/slices/cardSlice";
-import { generateFlashcardsStream } from "../../services/ai/cardGeneration";
+import {
+  generateFlashcardsStream,
+  generateFlashcards,
+} from "../../services/ai/cardGeneration";
 import { appConfig } from "../../config/appConfig";
 import Button from "../../components/common/Button";
 import Card from "../../components/common/Card";
@@ -69,7 +72,7 @@ export const CardGenerationScreen: React.FC = () => {
   };
 
   /**
-   * Generate flashcards with streaming
+   * Generate flashcards (streaming or non-streaming based on config)
    */
   const generateCards = async () => {
     try {
@@ -83,21 +86,24 @@ export const CardGenerationScreen: React.FC = () => {
       const generatedCards: GeneratedCard[] = [];
       const cardCount = appConfig.gemini.defaultCardCount;
 
-      // Stream cards as they're generated
-      for await (const card of generateFlashcardsStream(ocrText, cardCount)) {
-        generatedCards.push(card);
+      if (appConfig.gemini.streamingEnabled) {
+        // Stream cards as they're generated
+        for await (const card of generateFlashcardsStream(ocrText, cardCount)) {
+          generatedCards.push(card);
+          updateUIWithNewCard(card, generatedCards.length, cardCount);
+        }
+      } else {
+        // Generate all cards at once
+        const allCards = await generateFlashcards(ocrText, cardCount);
+        generatedCards.push(...allCards);
         setCards([...generatedCards]);
-        setProgress((generatedCards.length / cardCount) * 100);
+        setProgress(100);
 
-        // Dispatch to Redux
-        dispatch(addGeneratedCard(card));
+        // Dispatch all to Redux
+        allCards.forEach((card) => dispatch(addGeneratedCard(card)));
 
-        // Animate entrance
-        animateCardEntrance();
-
-        logger.info("Card generated", {
-          cardIndex: generatedCards.length,
-          total: cardCount,
+        logger.info("All cards generated", {
+          total: allCards.length,
         });
       }
 
@@ -111,6 +117,22 @@ export const CardGenerationScreen: React.FC = () => {
       setError("Failed to generate flashcards. Please try again.");
       setIsGenerating(false);
     }
+  };
+
+  /**
+   * Update UI when a new card is generated (for streaming)
+   */
+  const updateUIWithNewCard = (
+    card: GeneratedCard,
+    index: number,
+    total: number
+  ) => {
+    setCards((prev) => [...prev, card]);
+    setProgress((index / total) * 100);
+    dispatch(addGeneratedCard(card));
+    animateCardEntrance();
+
+    logger.info("Card generated", { cardIndex: index, total });
   };
 
   /**

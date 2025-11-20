@@ -126,7 +126,7 @@ export async function chat(
     const chatSession = await ai.chats.create({
       model: appConfig.gemini.model,
       config: {
-        temperature: 0.7, // Slightly lower for more focused responses
+        temperature: 1.0, // Recommended for Gemini 3 models
         topP: appConfig.gemini.topP,
         maxOutputTokens: appConfig.gemini.maxTokens,
       },
