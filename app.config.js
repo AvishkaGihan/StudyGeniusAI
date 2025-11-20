@@ -35,6 +35,7 @@ export default {
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
       ],
     },
     web: {
@@ -46,6 +47,13 @@ export default {
         {
           cameraPermission:
             "Allow $(PRODUCT_NAME) to access your camera to scan textbook pages",
+        },
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "Allow $(PRODUCT_NAME) to access your photos to select textbook images",
         },
       ],
     ],

@@ -67,17 +67,42 @@ export function useCamera() {
   }, [cameraType]);
 
   /**
-   * Pick image from gallery (placeholder - requires expo-image-picker installation)
+   * Pick image from gallery
    */
   const pickFromGallery = useCallback(async () => {
     try {
-      logger.warn(
-        "pickFromGallery called but expo-image-picker is not installed"
-      );
-      throw new AppError(
-        ErrorCode.CAMERA_PERMISSION_DENIED,
-        "Image picker is not available. Please install expo-image-picker"
-      );
+      logger.info("User Action: gallery_opened");
+
+      // Import expo-image-picker dynamically
+      const ImagePicker = await import("expo-image-picker");
+
+      // Request media library permissions
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== "granted") {
+        logger.warn("Media library permission denied");
+        throw new AppError(
+          ErrorCode.CAMERA_PERMISSION_DENIED,
+          "Media library permission is required to pick images"
+        );
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: "images" as any,
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (result.canceled) {
+        logger.info("Gallery selection cancelled");
+        return null;
+      }
+
+      const imageUri = result.assets[0].uri;
+      logger.info("Image selected from gallery", { imageUri });
+      return imageUri;
     } catch (error) {
       logger.error("Failed to pick image from gallery", { error });
       throw error;
