@@ -91,7 +91,13 @@ export async function* generateContentStream(
 
     logger.info("Streaming content generation completed");
   } catch (error) {
-    logger.error("Gemini streaming generation failed", { error });
+    logger.error("Gemini streaming generation failed", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorName: error instanceof Error ? error.name : undefined,
+      errorStatus: (error as any)?.status,
+    });
 
     if (error instanceof AppError) {
       throw error;
@@ -99,7 +105,7 @@ export async function* generateContentStream(
 
     throw new AppError(
       ErrorCode.GEMINI_API_ERROR,
-      "Failed to generate streaming content with AI"
+      `Failed to generate streaming content with AI: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
