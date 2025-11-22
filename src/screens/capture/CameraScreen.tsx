@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { View, Text, StyleSheet, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CameraView as ExpoCameraView, CameraType } from "expo-camera";
+import { CameraView as ExpoCameraView } from "expo-camera";
 import { CaptureStackParamList } from "../../utils/types";
 import { useCamera } from "../../hooks/useCamera";
 import { CameraView } from "../../components/camera/CameraView";
@@ -130,35 +130,36 @@ export const CameraScreen: React.FC = () => {
     );
   }
 
+  // Main camera view
   return (
     <View style={styles.container}>
-      {/* Camera View */}
       <CameraView
         ref={cameraRef}
-        cameraType={cameraType as CameraType | "front" | "back"}
+        cameraType={cameraType}
         onReady={onCameraReady}
         style={styles.camera}
       />
 
-      {/* Crop Overlay */}
-      <CropOverlay aspectRatio={4 / 3} />
+      <CropOverlay />
 
-      {/* Instructions */}
+      {/* Instructions overlay */}
       <View style={styles.instructionsContainer}>
         <Text style={styles.instructionsText}>
-          Align textbook page within the frame
+          Position the textbook page in view
         </Text>
       </View>
 
-      {/* Camera Controls */}
-      <CameraControls
-        onCapture={handleCapture}
-        onFlipCamera={toggleCameraType}
-        onOpenGallery={handleOpenGallery}
-        disabled={isCapturing || !isReady}
-      />
+      {/* Camera controls */}
+      <View style={styles.controlsContainer}>
+        <CameraControls
+          onCapture={handleCapture}
+          onFlipCamera={toggleCameraType}
+          onOpenGallery={handleOpenGallery}
+          disabled={!isReady || isCapturing}
+        />
+      </View>
 
-      {/* Capturing indicator */}
+      {/* Capturing overlay */}
       {isCapturing && (
         <View style={styles.capturingOverlay}>
           <LoadingSpinner message="Capturing..." />
@@ -176,6 +177,13 @@ const styles = StyleSheet.create({
 
   camera: {
     flex: 1,
+  },
+
+  controlsContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
 
   instructionsContainer: {

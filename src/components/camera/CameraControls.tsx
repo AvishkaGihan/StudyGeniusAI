@@ -5,8 +5,9 @@ import {
   Text,
   StyleSheet as CameraStyles,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../theme/colors";
-import { spacing, borderRadius } from "../../theme/spacing";
+import { spacing } from "../../theme/spacing";
 
 interface CameraControlsProps {
   onCapture: () => void;
@@ -25,50 +26,62 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
 }) => {
   return (
     <View style={controlStyles.container} testID={testID}>
-      {/* Gallery button */}
-      <TouchableOpacity
-        onPress={onOpenGallery}
-        disabled={disabled}
-        style={controlStyles.iconButton}
-        activeOpacity={0.7}
-      >
-        <Text style={controlStyles.iconText}>🖼️</Text>
-      </TouchableOpacity>
+      <SafeAreaView style={controlStyles.safeArea}>
+        <View style={controlStyles.controlsRow}>
+          {/* Gallery button */}
+          <TouchableOpacity
+            onPress={onOpenGallery}
+            disabled={disabled}
+            style={controlStyles.iconButton}
+            activeOpacity={0.7}
+          >
+            <Text style={controlStyles.iconText}>🖼️</Text>
+          </TouchableOpacity>
 
-      {/* Capture button */}
-      <TouchableOpacity
-        onPress={onCapture}
-        disabled={disabled}
-        style={[
-          controlStyles.captureButton,
-          disabled && controlStyles.disabled,
-        ]}
-        activeOpacity={0.7}
-      >
-        <View style={controlStyles.captureInner} />
-      </TouchableOpacity>
+          {/* Capture button */}
+          <TouchableOpacity
+            onPress={onCapture}
+            disabled={disabled}
+            style={[
+              controlStyles.captureButton,
+              disabled && controlStyles.disabled,
+            ]}
+            activeOpacity={0.7}
+          >
+            <View style={controlStyles.captureInner} />
+          </TouchableOpacity>
 
-      {/* Flip camera button */}
-      <TouchableOpacity
-        onPress={onFlipCamera}
-        disabled={disabled}
-        style={controlStyles.iconButton}
-        activeOpacity={0.7}
-      >
-        <Text style={controlStyles.iconText}>🔄</Text>
-      </TouchableOpacity>
+          {/* Flip camera button */}
+          <TouchableOpacity
+            onPress={onFlipCamera}
+            disabled={disabled}
+            style={controlStyles.iconButton}
+            activeOpacity={0.7}
+          >
+            <Text style={controlStyles.iconText}>🔄</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </View>
   );
 };
 
 const controlStyles = CameraStyles.create({
   container: {
+    backgroundColor: colors.glass.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 0,
+  },
+  safeArea: {
+    width: "100%",
+  },
+  controlsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.background.paper,
   },
   captureButton: {
     width: 70,

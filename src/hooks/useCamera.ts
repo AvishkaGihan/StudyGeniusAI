@@ -10,7 +10,7 @@ import { AppError, ErrorCode } from "../utils/errorHandling";
  */
 export function useCamera() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [cameraType, setCameraType] = useState<string>("back");
+  const [cameraType, setCameraType] = useState<"front" | "back">("back");
   const [isReady, setIsReady] = useState(false);
 
   /**
